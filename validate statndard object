@@ -1,0 +1,46 @@
+------------------VF page--------------------
+
+<apex:page docType="html-5.0" standardController="Contact">
+<apex:form >
+<apex:pageBlock >
+<apex:pageBlockSection columns="1" >
+<apex:inputField value="{!Contact.Email}" required="true" html-placeholder="Enter Email!">
+</apex:inputField>
+
+<apex:inputField styleClass="no" id="phone" value="{!Contact.Phone}" onkeyup="checkPhonee();" html-placeholder="Enter Phone No!">
+<span id="msg2" style="color:red"/>
+</apex:inputField>
+<script type="text/javascript">
+function checkPhonee(){    
+var phone=document.getElementById("j_id0:j_id1:j_id2:j_id3:phone").value;
+var letters = /^[A-Za-z]/;
+if(phone.length!=10 || isNaN(phone)){
+document.getElementById("msg2").innerHTML= "X";
+}else{
+document.querySelector(".no").value = "+91-"+phone;
+document.getElementById("msg2").innerHTML= "<span style='font-weight:bold; color: green;'>&check;</span>";
+}}
+</script>
+<apex:inputField id="price" styleClass="price" value="{!Contact.Available_Balance__c}" onKeyup="checkp(this.value)" html-placeholder="Enter Rupees!">
+<span id="msg" style="color:red"/>
+</apex:inputField>
+<script type="text/javascript"> 
+function checkp(val){
+var letters = /^[A-Za-z]+$/;
+var r=document.getElementById("j_id0:j_id1:j_id2:j_id3:price").value;
+if(!val.includes('₹') && val!=''){
+document.querySelector('.price').value = '₹'+val;
+}
+    else {
+        document.querySelector('.price').value =val;
+        
+}}
+</script>
+</apex:pageBlockSection>     
+<apex:pageBlockButtons >
+<apex:commandButton value="Submit" />
+</apex:pageBlockButtons>  
+</apex:pageBlock>  
+</apex:form>  
+</apex:page>
+

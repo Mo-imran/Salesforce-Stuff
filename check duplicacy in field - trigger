@@ -1,0 +1,16 @@
+------------------check duplicacy in field--------------------
+trigger CheckContact on Contact (before insert) {
+ 
+    for(Contact con:Trigger.New){
+        list<Contact> c=[select id, AccountId, FirstName, LastName from Contact where AccountId=:con.AccountId and LastName=:con.LastName];
+        
+        if(c.size()>0){
+            
+            con.addError('Record Already Presented');
+        }
+        
+    }
+
+}
+
+

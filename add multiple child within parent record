@@ -1,0 +1,99 @@
+------------------VF page--------------------
+
+<apex:page docType="html-5.0" controller="addr">
+    <apex:pageBlock >
+    <apex:form >
+        <apex:pageBlock >
+            <apex:pageBlockSection title="Parent">     
+   <apex:pageBlockSectionItem >
+       <apex:outputLabel >Parent Name:</apex:outputLabel>
+       <apex:outputPanel >
+           <apex:input type="text" value="{!pname}" title="Entry Name"  />
+           </apex:outputPanel>
+    </apex:pageBlockSectionItem> 
+    <apex:pageBlockSectionItem >
+       <apex:outputLabel >Parent Age:</apex:outputLabel>
+       <apex:outputPanel >
+       <apex:input type="text" value="{!page}" title="Entry Name"  />
+           </apex:outputPanel>
+    </apex:pageBlockSectionItem> 
+  
+    
+    </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:pageBlock id="new">
+            <apex:pageblockSection >
+                <apex:pageBlockTable value="{!accList}" var="acc">
+                    <apex:column headerValue="Name">
+                        <apex:inputField value="{!acc.Name}"/>
+                    </apex:column>
+                    <apex:column headerValue="Age">
+                        <apex:inputField value="{!acc.age__c}"/>
+                    </apex:column>
+               
+
+                </apex:pageBlockTable>
+                <br/><apex:commandButton value="Add Row" action="{!addc}" reRender="new"/>   
+            </apex:pageblockSection> 
+            <apex:pageMessages id="showmsg"></apex:pageMessages>
+            <apex:pageblockSection >
+                <apex:pageblockSectionItem >
+                    <apex:commandButton value="Submit" action="{!saveData}" />
+                    <apex:commandButton value="Cancel" action="{!clearData}" />
+                </apex:pageblockSectionItem>         
+            </apex:pageblockSection>
+        </apex:pageBlock>
+    </apex:form></apex:pageBlock>
+</apex:page>
+
+------------------Apex Page--------------------
+
+
+public class addr {
+   child__c acc = new child__c();
+    public string pname{ get; set; }
+    public integer page{ get; set; }
+    
+    public List<child__c> accList { get; set; }
+    public addr()
+    {
+        accList = new List<child__c>();
+        accList.add(acc);
+    }
+  
+     
+    Public void addc()
+    {
+        child__c ac = new child__c();
+        accList.add(new child__c());
+    }
+    
+    public void saveData(){
+
+       Parent__c p = new Parent__c();
+        if(pname=='' || page==0){
+        ApexPages.addmessage(new ApexPages.message(ApexPages.severity.FATAL,'Please Enter Parent Details'));
+        
+        }
+        else{p.Name = pname;
+        p.age__c = page;
+        
+        insert p;
+        for(child__c obj : accList){
+            obj.rel__c = p.Id;
+        }
+insert accList;
+             pname= null;
+        page= null;
+       accList.clear();   
+        
+            }  
+}
+    public void clearData(){
+      pname= null;
+        page= null;
+        
+        
+    }
+}
+

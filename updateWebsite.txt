@@ -1,0 +1,26 @@
+trigger updateWebsite on Account (after update, after insert) {
+    //List<Contact> contactList = new List<Contact>();
+    List<Contact> updateContact = new List<Contact>();
+    if (Trigger.isUpdate)
+    {
+        Set<ID> userIDs = new Set<ID>();
+        for(Account accTemp: Trigger.New){
+        userIDs.add(accTemp.Id);}
+        List<Contact> contactList = [SELECT Id, Profile__c,FirstName,LastName FROM Contact WHERE accountid =: userIDs];
+        for(Account acc: Trigger.New){
+            userIDs.add(acc.Id);
+            if(contactList.size() > 0){
+                for(contact objConatct: contactList){
+                    objConatct.Profile__c = acc.website +'/'+ objConatct.FirstName.substring(0,1) +'/'+ objConatct.LastName;
+                    updateContact.add(objConatct);
+                }
+            }
+        }
+    }
+    if(updateContact.size() > 0){
+        update updateContact;
+    }
+    
+    
+    
+}

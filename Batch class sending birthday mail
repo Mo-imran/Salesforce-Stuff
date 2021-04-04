@@ -1,0 +1,39 @@
+*Batch Class for sending birthday wish on contact birth day*
+
+global class BirthdayNotificationBatch Implements Database.Batchable <sObject> {
+    global Database.queryLocator start(Database.BatchableContext bc) {
+        Date tody = system.today();
+        String SOQL = 'SELECT Id, Name, Email FROM Contact WHERE DAY_IN_MONTH(Birthdate) = ' + 
+                      tody.day() +  ' AND CALENDAR_MONTH(Birthdate) = ' + tody.month();
+        return Database.getQueryLocator(SOQL);
+    }
+
+    global void execute(Database.BatchableContext bc, List<Contact> conList) {
+        List<Messaging.SingleEmailMessage> mailList = new List<Messaging.SingleEmailMessage>();
+        for(Contact m : conList) {
+            List<String> toAddresses = new List<String>{m.Email};           
+            Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+            mail.setTargetObjectId(toAddresses);
+            mail.setTemplateId('00X2w000000tyOV'); 
+            /*mail.setToAddresses(toAddresses);
+            mail.setSubject('Happy Birthday');
+            String messageBody = '<html><body>Hi ' + m.Name + ',<br/>Happy Birthday.<br/>Many More Happy '+
+                                 'Returns of the day.<br/><br/><b>Regards,</b><br/>Techila Global Services</body></html>';
+            mail.setHtmlBody(messageBody); */
+            mailList.add(mail);          
+        } 
+        Messaging.sendEmail(mailList);        
+    }
+
+    global void finish(Database.BatchableContext bc) {
+    }
+}
+
+---------------Schedule this batch-----------------
+
+global class HappyBirthdaySchedule implements Schedulable {
+   global void execute(SchedulableContext sc) {
+        BirthdayNotificationBatch b = new BirthdayNotificationBatch();
+        Database.executeBatch(b);
+   }
+}

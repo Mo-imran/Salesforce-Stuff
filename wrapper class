@@ -1,0 +1,67 @@
+------------------VF page--------------------
+
+<apex:page sidebar="false" controller="Checkbox_Class">
+   
+ <!--VF PAGE BLOCK-->
+
+ <apex:form >
+     <apex:pageBlock >
+        <apex:pageBlockButtons >
+          <apex:commandButton action="{!ProcessSelected}" value="Show Selected accounts" reRender="block2"/>
+        </apex:pageBlockButtons>
+       <apex:pageBlockSection columns="2">
+         <apex:pageBlockTable value="{!wrapaccountList}" var="waccl">
+            
+           <apex:column >
+           
+            <apex:inputCheckbox value="{!waccl.isSelected}" id="InputId"/>
+           </apex:column>
+            
+            <apex:column value="{!waccl.accn.Active__c}"/>
+            <apex:column value="{!waccl.accn.OwnerId}"/>
+            <apex:column value="{!waccl.accn.AccountNumber}"/>
+         </apex:pageBlockTable>
+         
+          <apex:pageBlockTable value="{!selectedAccounts}" var="sa" id="block2">
+            <apex:column value="{!sa.Active__c}"/>
+            <apex:column value="{!sa.OwnerId}"/>
+            <apex:column value="{!sa.AccountNumber}"/>
+           </apex:pageBlockTable>
+       
+       </apex:pageBlockSection>
+     </apex:pageBlock>
+   </apex:form>
+</apex:page>
+
+------------------Apex Page--------------------
+
+public class Checkbox_Class {
+//CONTROLLER CLASS
+    public list<wrapaccount> wrapaccountList { get; set; }
+    public list<account> selectedAccounts{get;set;}    
+	public Checkbox_Class(){
+  		 wrapaccountList =new list<wrapaccount>();
+          for(account a:[select id,Active__c,AccountNumber,OwnerId from account]){
+           wrapaccountlist.add(new wrapaccount(a));
+      }
+      }
+    //### SELECTED ACCOUNT SHOWN BY THIS METHOD
+      public void ProcessSelected(){
+     selectedAccounts=new list<account>();
+      for(wrapaccount wrapobj:wrapaccountlist){
+           if(wrapobj.isSelected==true){
+           selectedAccounts.add(wrapobj.accn);
+           }
+         }
+      }
+  //##THIS IS WRAPPER CLASS
+   // account and checkbox taken in wrapper class
+   public class wrapaccount{
+    public account accn{get;set;}
+    public boolean isSelected{get;set;}
+       public wrapaccount(account a){
+         accn=a;
+         isselected=false;
+       }
+  }
+}

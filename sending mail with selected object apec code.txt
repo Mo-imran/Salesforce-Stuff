@@ -1,0 +1,422 @@
+public with sharing class MassSMSController {
+    
+    public boolean sendToBorrower{get;set;}
+    public boolean sendToCoBorrower{get;set;}
+    public Set<Id> recordIdSet;
+    public String body{get;set;}
+    public Integer charLimit{get;set;}
+    public String templateNames{get;set;}
+    public List<SMS_Template__c> smsTemplateList{get;set;}
+    public String objectAPIName;
+    public String objectType;
+    public Id recordId{get;set;}
+    public String nameStr {get;set;}
+    public List<String> nameList {get;set;}
+    
+    public MassSMSController(ApexPages.StandardSetController standardController){
+        sendToBorrower =true;
+        sendToCoBorrower =true;
+        SMSUtil util = new SMSUtil();
+        body = '';
+        charLimit = 1500;
+        templateNames = '';
+        recordIdSet = new Set<Id>();
+        smsTemplateList = new List<SMS_Template__c>();
+        objectType = '';
+        nameStr = '';
+        String sObjName = '';
+        nameList = new List<String>();
+        //selected records
+        for(SObject obj : (List<SObject>)standardController.getSelected()){ 
+            System.debug('>>'+obj);
+            sObjName = obj.Id.getSObjectType().getDescribe().getName();
+            System.debug('>>'+sObjName);
+            recordIdSet.add(obj.Id);
+            recordId = obj.Id;
+            objectType = obj.Id;
+            
+            
+        }
+        String query='select name from '+sObjName+ ' where Id in: recordIdSet';
+        List <SObject> l=Database.query(query);
+        for(SObject sobj : l)  {
+            system.debug('sobject' +sobj.get('name'));
+            nameStr += string.valueOf(sobj.get('name')) + ', ' ;
+            nameList.add(string.valueOf(sobj.get('name')));
+        }
+        objectAPIName = '';
+        if(recordId !=null){
+            objectApiName = recordId.getSObjectType().getDescribe().getName();
+        }
+        
+        // Fetch all Created SMS Templates
+        if(objectApiName != null && objectApiName != '' && Schema.sObjectType.SMS_Template__c.fields.Name.isAccessible() && Schema.sObjectType.SMS_Template__c.fields.Template_Body__c.isAccessible() && Schema.sObjectType.SMS_Template__c.fields.SObject_Type__c.isAccessible()){
+            smsTemplateList = [SELECT Id, Name, Template_Body__c, SObject_Type__c FROM SMS_Template__c WHERE SObject_Type__c =: objectApiName AND Name != null];
+        }
+        
+    }
+    
+    public MassSMSController(){}
+    
+    //Method to send message on send message button click from page
+    public pageReference sendSms(){
+        Default_Users_and_Agents__c  userSettingsObj = Default_Users_and_Agents__c.getOrgDefaults();
+        User LO = [Select Id,TimeZoneSidKey from User where Id =: userSettingsObj.Loan_Officer__c];
+        
+        List<CANDID__Message__c> MessageList = new List<CANDID__Message__c>();
+        List<CANDID__Parent__c> parentlist = new List<CANDID__Parent__c>();
+        Map<Id,CANDID__Parent__c> parentMapToInsert = new Map<Id,CANDID__Parent__c>();
+        Map<Id,CANDID__Parent__c> ParentMap = new Map<Id,CANDID__Parent__c>();
+        Map<Id,Lead> LeadMap;
+        Map<Id,Contact> ContactMap;
+        Map<Id,Opportunity> OpportunityMap;
+        Map<Id,Account> AccountMap;
+        
+        String objName;
+        Twilio_Settings__c objTwilioSetting = Twilio_Settings__c.getInstance('Twilio Account');
+        If(!recordIdSet.isEmpty()){
+            parentlist = [SELECT Id, CANDID__Parent_SF_ID__c,CANDID__Parent_Owner__c FROM CANDID__Parent__c WHERE CANDID__Parent_SF_ID__c IN: recordIdSet];
+            objName = string.valueOf(new list<Id>(recordIdSet)[0].getSobjectType());
+        }
+        If(!parentlist.isEmpty()){
+            for(CANDID__Parent__c prt: parentlist){
+                ParentMap.put(prt.CANDID__Parent_SF_ID__c, prt);
+            }
+        }
+        
+        
+        If(!recordIdSet.isEmpty()){
+            If(objName == 'Lead'){
+                LeadMap = new Map<Id,Lead>([SELECT Id, CANDID__Co_Borrower_Phone__c, CANDID__Borrower_Phone__c, OwnerId, Name From Lead WHERE Id in : recordIdSet]);
+                for(Id recordId : recordIdSet){
+                    If(!ParentMap.containskey(recordId) && LeadMap.containsKey(recordId)){
+                        Parent__c objParent = new Parent__c();
+                        objParent.Parent_SF_ID__c = recordId;
+                        objParent.Parent_SF_Name__c = LeadMap.get(recordId).name;
+                        objParent.Parent_SObject_Type__c = objName;
+                        objParent.Parent_Owner__c = string.isNotBlank(LeadMap.get(recordId).OwnerId) && string.valueof(LeadMap.get(recordId).OwnerId).startsWith('005')? LeadMap.get(recordId).OwnerId: null;
+                        objParent.Archived__c = false;
+                        objParent.Opt_Out__c = false;
+                        objParent.Opt_In__c = true;
+                        parentMapToInsert.put(recordId,objParent);
+                    }
+                }
+                If(!parentMapToInsert.isEmpty()){
+                    Insert parentMapToInsert.values();
+                }
+                for(Id recordId : recordIdSet){
+                    Lead leadrecord;
+                    if(LeadMap.containsKey(recordId)){
+                        leadrecord = LeadMap.get(recordId);
+                    }
+                    if(sendToBorrower && leadrecord.CANDID__Borrower_Phone__c != null && leadrecord.CANDID__Borrower_Phone__c !='0000000000' && leadrecord.CANDID__Borrower_Phone__c !='000.000.0000' && leadrecord.CANDID__Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = leadrecord.CANDID__Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)leadrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }  
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        
+                        MessageList.add(messageRecord);
+                    }
+                    
+                    if(sendToCoBorrower && leadrecord.CANDID__Co_Borrower_Phone__c != null && leadrecord.CANDID__Co_Borrower_Phone__c !='0000000000' && leadrecord.CANDID__Co_Borrower_Phone__c !='000.000.0000' && leadrecord.CANDID__Co_Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = leadrecord.CANDID__Co_Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)leadrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        MessageList.add(messageRecord);
+                    }            
+                }
+            }
+            
+            else If(objName == 'Contact'){
+                ContactMap = new Map<Id,Contact>([SELECT Id, CANDID__Co_Borrower_Phone__c, CANDID__Borrower_Phone__c, OwnerId, Name From Contact WHERE Id in : recordIdSet]);
+                for(Id recordId : recordIdSet){
+                    If(!ParentMap.containskey(recordId) && ContactMap.containsKey(recordId)){
+                        Parent__c objParent = new Parent__c();
+                        objParent.Parent_SF_ID__c = recordId;
+                        objParent.Parent_SF_Name__c = ContactMap.get(recordId).name;
+                        objParent.Parent_SObject_Type__c = objName;
+                        objParent.Parent_Owner__c = string.isNotBlank(ContactMap.get(recordId).OwnerId) && string.valueof(ContactMap.get(recordId).OwnerId).startsWith('005')? ContactMap.get(recordId).OwnerId: null;
+                        objParent.Archived__c = false;
+                        objParent.Opt_Out__c = false;
+                        objParent.Opt_In__c = true;
+                        parentMapToInsert.put(recordId,objParent);
+                    }
+                }
+                If(!parentMapToInsert.isEmpty()){
+                    Insert parentMapToInsert.values();
+                }
+                for(Id recordId : recordIdSet){
+                    Contact Contactrecord;
+                    if(ContactMap.containsKey(recordId)){
+                        Contactrecord = ContactMap.get(recordId);
+                    }
+                    if(sendToBorrower && Contactrecord.CANDID__Borrower_Phone__c != null && Contactrecord.CANDID__Borrower_Phone__c !='0000000000' && Contactrecord.CANDID__Borrower_Phone__c !='000.000.0000' && Contactrecord.CANDID__Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = Contactrecord.CANDID__Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)Contactrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }  
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        
+                        MessageList.add(messageRecord);
+                    }
+                    
+                    if(sendToCoBorrower && Contactrecord.CANDID__Co_Borrower_Phone__c != null && Contactrecord.CANDID__Co_Borrower_Phone__c !='0000000000' && Contactrecord.CANDID__Co_Borrower_Phone__c !='000.000.0000' && Contactrecord.CANDID__Co_Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = Contactrecord.CANDID__Co_Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)Contactrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        MessageList.add(messageRecord);
+                    }            
+                }
+            }
+            
+            else  If(objName == 'Opportunity'){
+                OpportunityMap = new Map<Id,Opportunity>([SELECT Id, CANDID__Co_Borrower_Phone__c, CANDID__Borrower_Phone__c, OwnerId, Name From Opportunity WHERE Id in : recordIdSet]);
+                for(Id recordId : recordIdSet){
+                    If(!ParentMap.containskey(recordId) && OpportunityMap.containsKey(recordId)){
+                        Parent__c objParent = new Parent__c();
+                        objParent.Parent_SF_ID__c = recordId;
+                        objParent.Parent_SF_Name__c = OpportunityMap.get(recordId).name;
+                        objParent.Parent_SObject_Type__c = objName;
+                        objParent.Parent_Owner__c = string.isNotBlank(OpportunityMap.get(recordId).OwnerId) && string.valueof(OpportunityMap.get(recordId).OwnerId).startsWith('005')? OpportunityMap.get(recordId).OwnerId: null;
+                        objParent.Archived__c = false;
+                        objParent.Opt_Out__c = false;
+                        objParent.Opt_In__c = true;
+                        parentMapToInsert.put(recordId,objParent);
+                    }
+                }
+                If(!parentMapToInsert.isEmpty()){
+                    Insert parentMapToInsert.values();
+                }
+                for(Id recordId : recordIdSet){
+                    Opportunity Opportunityrecord;
+                    if(OpportunityMap.containsKey(recordId)){
+                        Opportunityrecord = OpportunityMap.get(recordId);
+                    }
+                    if(sendToBorrower && Opportunityrecord.CANDID__Borrower_Phone__c != null && Opportunityrecord.CANDID__Borrower_Phone__c !='0000000000' && Opportunityrecord.CANDID__Borrower_Phone__c !='000.000.0000' && Opportunityrecord.CANDID__Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = Opportunityrecord.CANDID__Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)Opportunityrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }  
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        
+                        MessageList.add(messageRecord);
+                    }
+                    
+                    if(sendToCoBorrower && Opportunityrecord.CANDID__Co_Borrower_Phone__c != null && Opportunityrecord.CANDID__Co_Borrower_Phone__c !='0000000000' && Opportunityrecord.CANDID__Co_Borrower_Phone__c !='000.000.0000' && Opportunityrecord.CANDID__Co_Borrower_Phone__c !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = Opportunityrecord.CANDID__Co_Borrower_Phone__c;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)Opportunityrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        MessageList.add(messageRecord);
+                    }            
+                }
+            }
+            
+            else  If(objName == 'Account'){
+                AccountMap = new Map<Id,Account>([SELECT Id, Phone, OwnerId, Name From Account WHERE Id in : recordIdSet]);
+                for(Id recordId : recordIdSet){
+                    If(!ParentMap.containskey(recordId) && AccountMap.containsKey(recordId)){
+                        Parent__c objParent = new Parent__c();
+                        objParent.Parent_SF_ID__c = recordId;
+                        objParent.Parent_SF_Name__c = AccountMap.get(recordId).name;
+                        objParent.Parent_SObject_Type__c = objName;
+                        objParent.Parent_Owner__c = string.isNotBlank(AccountMap.get(recordId).OwnerId) && string.valueof(AccountMap.get(recordId).OwnerId).startsWith('005')? AccountMap.get(recordId).OwnerId: null;
+                        objParent.Archived__c = false;
+                        objParent.Opt_Out__c = false;
+                        objParent.Opt_In__c = true;
+                        parentMapToInsert.put(recordId,objParent);
+                    }
+                }
+                If(!parentMapToInsert.isEmpty()){
+                    Insert parentMapToInsert.values();
+                }
+                for(Id recordId : recordIdSet){
+                    Account Accountrecord;
+                    if(AccountMap.containsKey(recordId)){
+                        Accountrecord = AccountMap.get(recordId);
+                    }
+                    if(Accountrecord.Phone != null && Accountrecord.Phone !='0000000000' && Accountrecord.Phone !='000.000.0000' && Accountrecord.Phone !='' && (parentMapToInsert.containskey(recordId) || ParentMap.containskey(recordId))){
+                        CANDID__Message__c messageRecord = new CANDID__Message__c();
+                        messageRecord.CANDID__Type__c = 'Outgoing SMS';
+                        messageRecord.CANDID__Status__c = 'In Progress';
+                        messageRecord.CANDID__From_Number__c = objTwilioSetting.From_Number__c;
+                        messageRecord.CANDID__To_Number__c = Accountrecord.Phone;
+                        messageRecord.CANDID__Parent_SObject_Id__c = recordId;
+                        String parseBody = '';
+                        parseBody = SmsUtil.MergeText(body,recordId, (sObject)Accountrecord);
+                        if(parseBody.length() > 1500){
+                            parseBody = parseBody.substring(0,1500);
+                        }  
+                        messageRecord.CANDID__Message__c = parseBody;
+                        if(parentMapToInsert.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMapToInsert.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMapToInsert.get(recordId).CANDID__Parent_Owner__c;
+                        }else if(parentMap.containskey(recordId)){
+                            messageRecord.CANDID__Parent__c = parentMap.get(recordId).id;
+                            messageRecord.CANDID__Parent_SObject_OwnerId__c = parentMap.get(recordId).CANDID__Parent_Owner__c;
+                        }                
+                        
+                        MessageList.add(messageRecord);
+                    }
+                }
+            }            
+        }
+        
+        insert MessageList;
+        
+        PageReference returnPage;
+        String objectSuffix = '';
+        if(objectType != null && objectType != ''){
+            objectSuffix = objectType.substring(0,3);
+            returnPage = new PageReference('/'+objectSuffix+'/o');
+            returnPage.setRedirect(true);
+        }else{
+            objectSuffix = ApexPages.currentPage().getParameters().get('retURL');
+            //List<String> urlList = objectSuffix.split('/');
+            if(objectSuffix != null && objectSuffix != ''){
+                returnPage = new PageReference('/'+objectSuffix.substring(1,4)+'/o');
+            }else{
+                returnPage = new PageReference('/one/one.app?source=alohaHeader#/home');
+            }
+            returnPage.setRedirect(true);
+        }
+        return returnPage;
+    }
+    
+    //Add templates in Select Option
+    public List<SelectOption> getTemplates(){
+        List<SelectOption> templateOptions = new List<SelectOption>();
+        templateOptions.add(new SelectOption('--None--','--None--'));
+        for(SMS_Template__c objSms : smsTemplateList){            
+            templateOptions.add(new SelectOption(objSms.Name,objSms.Name));
+        }
+        templateOptions.sort();
+        return templateOptions;
+    }
+    
+    //Get Selected Template
+    public pageReference selectTemplate(){
+        try{
+            if(templateNames != null && templateNames != '--None--' && Schema.sObjectType.SMS_Template__c.fields.Name.isAccessible() && Schema.sObjectType.SMS_Template__c.fields.Template_Body__c.isAccessible() && Schema.sObjectType.SMS_Template__c.fields.SObject_Type__c.isAccessible()){
+                SMS_Template__c objTemplate = [SELECT Id, Name, Template_Body__c From SMS_Template__c WHERE Name =: templateNames AND SObject_Type__c =:objectAPIName limit 1];
+                body = objTemplate.Template_Body__c;
+            }else{
+                body = '';
+            }
+        }catch(Exception e){
+            SMSUtil.createTextibleLog('BulkSMSController','selectTemplate',e.getMessage(),e.getStackTraceString());
+        }
+        return null;  
+    }
+    
+    //Redirect to contact list view page
+    public pageReference Back(){
+        PageReference returnPage;
+        String objectSuffix = '';
+        if(objectType != null && objectType != ''){
+            objectSuffix = objectType.substring(0,3);
+            returnPage = new PageReference('/'+objectSuffix+'/o');
+            returnPage.setRedirect(true);
+        }else{
+            objectSuffix = ApexPages.currentPage().getParameters().get('retURL');
+            //List<String> urlList = objectSuffix.split('/');
+            if(objectSuffix != null && objectSuffix != ''){
+                returnPage = new PageReference('/'+objectSuffix.substring(1,4)+'/o');
+            }else{
+                returnPage = new PageReference('/one/one.app?source=alohaHeader#/home');
+            }
+            returnPage.setRedirect(true);
+        }
+        return returnPage;
+    }
+}

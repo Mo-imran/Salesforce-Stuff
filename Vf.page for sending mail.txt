@@ -1,0 +1,88 @@
+<apex:page showHeader="false" sidebar="false" standardController="Lead" extensions="MassSMSController" recordSetVar="Member">
+    
+    <apex:slds />
+    <apex:form >
+        <apex:actionStatus id="actionStatusID">
+            <apex:facet name="start">
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                    &nbsp;
+                </div>
+                <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                    <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px; margin-left: -60px;">
+                        <img src="/img/loading.gif" /><!--style="float: left; margin: 8px;" /-->
+                        <span>Please Wait...</span>
+                    </div>
+                </div>
+            </apex:facet>
+        </apex:actionStatus>
+        
+        <!--apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"/-->
+        <apex:includeScript value="{!URLFOR($Resource.StaticResForJs, 'jquery.min.js')}"/>
+        <div class="center" style="background-color:white; padding-left: 2%; padding-right: 2%; border-radius: 2%; width: 35%; margin: auto;">
+            <apex:pageMessages id="pageMsg"/>
+            <div class="slds-align_absolute-center slds-text-heading_small slds-p-vertical--small">
+                Send SMS
+            </div>
+            <div class="slds-grid slds-wrap slds-p-vertical--small">
+                <div class="slds-col slds-size_2-of-12">
+                    <span>Send To : </span>
+                </div>
+                <div class="slds-col slds-size_3-of-12">
+                    <span><apex:inputCheckbox value="{!sendToBorrower}"/>
+                        Borrower</span>
+                </div>
+                <div class="slds-col slds-size_3-of-12">
+                    <span><apex:inputCheckbox value="{!sendToCoBorrower}"/>
+                        Co-Borrower</span>
+                </div>
+            </div>
+            <!--selected records name-->
+                    <label class="slds-form-element__label" for="templates" >To : &nbsp; </label>
+            <apex:repeat value="{!nameList}" var="key1">
+              <span style="background-color: #0070D2;padding: 1px 4px;border-radius: 8px;font-size: inherit;font-weight: 600;color: white;">{!key1}</span>  
+            </apex:repeat>
+            
+            
+            <div class="slds-grid slds-wrap">
+                <div class="slds-col">
+                    <div class="slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                        <label class="slds-form-element__label" for="templates" >Select Template: &nbsp; </label>
+                    </div>
+                    
+                    <div class="slds-grid slds-wrap slds-grid--pull-paddedd">
+                        <apex:selectList styleClass="slds-input slds-combobox__input" value="{!templateNames}" size="1" id="templates" > <!-- style="margin-left: 18px;" -->
+                            <apex:selectOptions value="{!Templates}" />
+                            <apex:actionSupport action="{!selectTemplate}" event="onchange" reRender="messageBody,charPanel" status="actionStatusID" oncomplete="UpdateCharLimit('{!body}');"/>
+                        </apex:selectList>
+                    </div>  
+                </div>
+            </div>
+            <br/>
+            <div class="slds-form-element__control">
+                <div class="slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                    <label class="slds-form-element__label" for="templates" >Message : &nbsp; </label>
+                </div>
+                <div class="slds-grid slds-wrap slds-grid--pull-paddedd">
+                    <apex:inputTextarea styleClass="slds-input"  html-placeholder="Type a message here..." value="{!body}" id="messageBody"  onkeyup="countChar(this,'#charNum')" />
+                </div>  
+            </div>
+            <div class="slds-grid">
+                <div class = "slds-col_bump-left">
+                    <label class="slds-form-element__label" for="charNum" style="font-weight: normal; ">Characters remaining
+                        <span id="charNum">
+                            {!charLimit}
+                        </span>
+                    </label>
+                </div>
+            </div>
+            <div class="slds-grid slds-align_absolute-center slds-p-vertical--small">
+                <div style=" ">
+                    <apex:commandButton value="Back" action="{!Back}" styleClass="slds-button slds-button_outline-brand buttonClass"/>
+                    <apex:commandButton value="Send" action="{!sendSms}" reRender="messageBody,pageMsg,sendMsgTo" status="actionStatusID" styleClass="slds-button slds-button--brand" oncomplete="UpdateCharLimit('{!body}'); overridePageMessages();"/><!--  -->
+                </div>
+            </div>
+            
+        </div>
+        <apex:includeScript value="{!URLFOR($Resource.BulkSmsJsCss, '/BulkSmsJsCss/BulkSMS.js')}"/>
+    </apex:form>
+</apex:page>

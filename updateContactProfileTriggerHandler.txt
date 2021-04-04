@@ -1,0 +1,25 @@
+public class updateContactProfileTriggerHandler {
+  	
+    public void updateContactProfile(List<contact> contactList){
+    Set<id> accIdList = new Set<id>();
+    for(Contact con : contactList)
+    {
+        accIdList.add(con.accountid);
+    }
+    system.debug('accIdList' +accIdList);    
+    for(Account acc : [SELECT id, name, website FROM Account WHERE Id IN : accIdList])
+        
+    {
+        system.debug('acc'+acc);
+        for(Contact con : contactList)
+        {
+            if(acc.website != null){
+                con.Profile__c = acc.Website + '/' + con.FirstName.substring(0, 1) + '/' + con.lastname;
+                system.debug('con.Profile__c'+con.Profile__c);
+            }
+            
+        }
+    }
+    
+    }
+}

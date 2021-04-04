@@ -1,0 +1,19 @@
+------------------create order if opportunity stage is closed won--------------------
+
+trigger createOrder on Opportunity (after insert, after update) {
+    
+     List <Order> CreateOrd = new List <Order> ();
+    
+    for (Opportunity o : Trigger.new) {
+        if (o.StageName == 'Closed Won' && o.Amount >=10000){            
+            Order s = new Order ();  
+              s.OpportunityId=o.id;
+                s.AccountId =o.AccountId;
+            s.EffectiveDate = o.CloseDate;
+            s.Status= 'Draft';
+            CreateOrd.add(s);            
+        }
+    }
+      INSERT CreateOrd; 
+    }
+

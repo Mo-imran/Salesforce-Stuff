@@ -1,0 +1,134 @@
+------------------VF page--------------------
+
+<apex:page docType="html-5.0" Controller="insertUniqueRecordsctrl">
+    
+    <apex:pageBlock title="Insert Record" >
+        <apex:form >
+            <apex:pageBlockSection columns="1"> 
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >First Name:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:input type="text" value="{!Fname}"/>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem> 
+                <apex:pageBlockSectionItem >
+				<apex:outputLabel >Last Name:</apex:outputLabel>
+				<apex:outputPanel >
+				<apex:input type="text" value="{!SName}"/> 
+				</apex:outputPanel>
+				</apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Date Of Birth:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:input type="date" value="{!dob}"/>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Email Address:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:input type="text" value="{!emailAddress}"/>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Address:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:inputTextarea value="{!MStreet}" cols="4" style="width:200px;"/>
+                    </apex:outputPanel>
+                    
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Company Name:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:input type="text" value="{!mycompany}"/>
+                    </apex:outputPanel>
+                    
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Yearly Income:</apex:outputLabel>
+                    <apex:outputPanel >
+                        <apex:input type="number" value="{!yearlyIncome}"/> 
+                    </apex:outputPanel>
+                    
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:commandButton value="Insert Record" action="{!save}"/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            
+        </apex:form>    
+    </apex:pageBlock>    
+</apex:page>
+
+------------------Apex Page--------------------
+
+public  class insertUniqueRecordsctrl {  //removed with sharing 
+    
+    public string FName {get;set;}  
+    public string SName {get;set;} 
+    public Date dob {get;set;}
+    public string MStreet {get;set;}
+    public string mycompany {get;set;}
+    public integer yearlyIncome {get;set;}
+    public string emailAddress{get;set;}
+    
+    public void save(){
+        Account acc=new Account(); 
+        
+        List<Account> accList = new List<Account>();
+        List<Account> accL = [Select Id,Company_Name__c from Account where Company_Name__c=:mycompany ];
+        if(!accL.isEmpty()){   //check if list is empty instead of size or compare against 0  if(accL.size()>=1){
+            List<Contact> conList = new List<Contact>();
+            Contact con = new Contact();
+            con.FirstName = FName;
+            con.LastName = SName;
+            con.Birthdate = dob;
+            con.Email = emailAddress;
+            con.MailingStreet = MStreet;
+            con.Accountid = accL[0].id;
+            conList.add(con);
+            insert conList;
+            System.debug('Inserted');
+            
+        }else
+        {
+            Account ac=new Account(); 
+            List<Account> accList2 = new List<Account>();
+            ac.Name= FName;
+            ac.AnnualRevenue =yearlyIncome;
+            ac.Company_Name__c=mycompany;
+            accList2.add(ac);
+            insert accList2;
+            List<Contact> coList = new List<Contact>();
+            for (Account acc1 : accList2){
+                Contact co = new Contact();
+                co.FirstName = FName;
+                co.LastName = SName;
+                co.Birthdate=dob;
+                co.Email = emailAddress;
+                co.MailingStreet=MStreet;
+                co.Accountid = ac.id;
+                coList.add(co);
+            }   
+            insert coList;
+            System.debug('Inserted');
+            
+            
+        }
+        FName=null;
+        SName=null;
+        dob=null;
+        MStreet=null;
+        mycompany=null;
+        yearlyIncome=null;
+        emailAddress =null;
+        
+    }
+    
+    
+}

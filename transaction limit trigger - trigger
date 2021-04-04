@@ -1,0 +1,89 @@
+------------------Limit check--------------------
+
+trigger limitTrigger on Transaction__c (before insert) {
+
+    for(Transaction__c tran : Trigger.New){       
+            
+        
+        
+        Contact con =[select Transaction_Limit__r.Maximum_Debit_Allowed_per_Month__c, Transaction_Limit__r.Maximum_Transactions_Allowed_per_Month__c, Available_Balance__c, Transaction_Limit__r.Maximum_Debit_Allowed_per_Day__c, Transaction_Limit__r.Maximum_Transactions_Allowed_per_Day__c, Transaction_Limit__r.Maximum_Debit_Allowed_per_Transaction__c from Contact where Id =: tran.Contact__c];
+        List<Transaction__c> tr = [select Type__c, Amount__c, Id from Transaction__c where Contact__r.Id =: con.Id and CreatedDate >=: date.today()];
+        List<Transaction__c> tr2 = [select Amount__c, Id from Transaction__c where Contact__r.Id =: con.Id and CreatedDate >= THIS_MONTH];
+        
+       
+        
+        decimal mdpm = con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Month__c;
+        string m= string.valueOf(mdpm);
+        string m2 = tr2.size() + tran.Type__c; 
+        
+        
+        decimal mdpd = con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Month__c;
+        string i= string.valueOf(mdpd);
+        string i2 = tr.size() + tran.Type__c;
+        
+        
+        system.debug('amount count' +tr2);
+        system.debug('size of Debit/Credit per day' +i2);
+        system.debug('size of Debit/Credit per month' +m2);
+        system.debug('here is the date' +date.today());
+        system.debug('size of day' +tr.size());
+        system.debug('size of month' +tr2.size());
+        system.debug('max tran per day' +con.Transaction_Limit__r.Maximum_Transactions_Allowed_per_Day__c);
+        system.debug('max debit per transaction' +con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Transaction__c);
+        
+        
+         if(tr2.size() <= con.Transaction_Limit__r.Maximum_Transactions_Allowed_per_Month__c)
+        {
+            if(tran.Type__c == 'Debit'  && m2 <= m){
+                   
+           
+            
+        if(tr.size() <= con.Transaction_Limit__r.Maximum_Transactions_Allowed_per_Day__c)
+        {
+        
+        if(tran.Type__c == 'Debit'  && i2 <= i){
+            
+            if(tran.Type__c == 'Debit'  && tran.Amount__c <= con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Transaction__c){
+                update con;
+            }
+        
+        else if(tran.Type__c == 'Credit')
+        {
+                update con;
+        }
+        else{
+           tran.addError('Maximum ' +con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Transaction__c+ ' Debit Allowed per Transaction' );
+         
+        }
+        }
+         else if(tran.Type__c == 'Credit')
+        {
+                update con;
+        }
+        else{
+           tran.addError('Maximum ' +con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Day__c+ ' Debit Allowed per Day' );
+         
+        }
+        }
+        else{
+        tran.addError('Maximum ' +con.Transaction_Limit__r.Maximum_Transactions_Allowed_per_Day__c+ ' Transactions Allowed per Day' );
+        }
+                
+            }
+           else if(tran.Type__c == 'Credit')
+            {
+                update con;
+                
+            }
+            else{
+                
+                tran.addError('Maximum ' +con.Transaction_Limit__r.Maximum_Debit_Allowed_per_Month__c+ ' Debit Allowed per Month' );
+            }
+            }
+        else{
+        tran.addError('Maximum ' +con.Transaction_Limit__r.Maximum_Transactions_Allowed_per_Month__c+ ' Transactions Allowed per Month' );
+        }
+     
+    }
+}
+

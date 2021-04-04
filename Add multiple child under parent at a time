@@ -1,0 +1,77 @@
+------------------VF page--------------------
+
+<apex:page controller="AddingInterestsController">
+    <apex:form >
+        <apex:variable var="rowNum" value="{!0}"  />
+        <apex:pageBlock >
+            <apex:variable var="rowNum" value="{!0}"  />  
+            <apex:pageBlockTable value="{!interestList}" var="t">
+                <apex:facet name="footer">
+                    <apex:commandLink value="Add" action="{!insertRow}"/>
+                </apex:facet>
+                <apex:column headerValue="Name">
+                    <apex:inputField value="{!t.Name}"/>
+                </apex:column>
+                <apex:column headerValue="Age">
+                    <apex:inputField value="{!t.Age__c}"/>
+                </apex:column> 
+                <apex:column headerValue="Gender">
+                    <apex:inputField value="{!t.Gender__c}"/>
+                </apex:column>
+                <apex:column headerValue="Phone No">
+                    <apex:inputField value="{!t.Phone_No__c}"/>
+                </apex:column>
+                <apex:column headerValue="Address">
+                    <apex:inputField value="{!t.Address__c}"/>
+                </apex:column>
+                <apex:column headerValue="Delete" >
+                    <apex:commandLink style="font-size:15px; font-weight:bold; text-align:center;color:red;" value="X" action="{!delRow}">
+                        <apex:param value="{!rowNum}" name="index" />
+                    </apex:commandLink>
+                    <apex:variable var="rowNum" value="{!rowNum+1}"/>
+                </apex:column>          
+            </apex:pageBlockTable>
+            <apex:pageBlockButtons >
+                <apex:commandButton value="Save" action="{!insertIntests}"/>
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+-------------------button---------------------
+window.open("/apex/AddingInterestsPage?empId={!Myparent__c.Id}");
+
+------------------Apex Page--------------------
+
+
+
+public class AddingInterestsController {
+    Id empId;
+    public string t;
+    public List<Mychild__c> interestList {get;set;}
+    public Integer rowNum{get;set;}
+    
+    public AddingInterestsController(){
+        empId = ApexPages.currentPage().getParameters().get('empId');
+        interestList = new List<Mychild__c>();  
+        interestList.add(new Mychild__c());      
+    }
+    
+    public void insertIntests(){
+       for( Mychild__c objInt : interestList ){
+objInt.Childs__c = empId;
+}
+insert interestList;
+           
+        interestList.clear();
+    }
+    
+    public void insertRow(){
+        interestList.add(new Mychild__c()); 
+    }
+    
+    public void delRow(){
+        rowNum = Integer.valueOf(apexpages.currentpage().getparameters().get('index'));
+        interestList.remove(rowNum);   
+    }
+}

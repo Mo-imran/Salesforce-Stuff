@@ -1,0 +1,25 @@
+-------------------parentapexTest-------------------
+@isTest
+public class parentapexTest {
+    
+   static testMethod void insertNewUser() {
+    
+       Parent__c pa = new Parent__c();
+        pa.Name = 'Test Classes';
+        pa.age__c = 22;
+        insert pa;
+       system.debug('here is the details' +pa);
+       
+      Test.startTest();
+
+        parentapex p= new parentapex();
+       	p.add();
+         Test.stopTest();  
+       
+}
+
+}
+
+
+
+

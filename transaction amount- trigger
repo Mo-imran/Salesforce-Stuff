@@ -1,0 +1,34 @@
+------------------transaction amount trigger--------------------
+
+trigger TransactionTrigger on Transaction__c(before insert, before update) {
+
+Transaction__c tran = Trigger.New[0];     
+    
+        System.debug('your Trigger is' + Trigger.New);
+    Contact con =[select Available_Balance__c from Contact where Id =: tran.Contact__c ];
+     
+    System.debug('your Available Val is' + con.Available_Balance__c);
+    
+    
+        
+    if(tran.Amount__c > con.Available_Balance__c & tran.Type__c == 'Debit')
+    {
+        
+       tran.addError('Your Debit Amount is Greater than Your Available Balance!'); 
+    }
+    
+    else if(tran.Type__c == 'Debit'){
+    con.Available_Balance__c = con.Available_Balance__c - tran.Amount__c;
+    update con;
+    }
+
+    else if(tran.Type__c == 'Credit'){
+    con.Available_Balance__c = con.Available_Balance__c + tran.Amount__c;
+    update con;
+     
+    
+    }
+    }
+
+
+

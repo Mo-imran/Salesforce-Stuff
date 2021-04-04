@@ -1,0 +1,56 @@
+------------------VF page--------------------
+
+<apex:page docType="html-5.0" standardController="Contact" extensions="mstatement">
+  <apex:pageBlock > <apex:form >
+     
+      <apex:pageBlockSection title="Transaction History" columns="1">
+ <apex:pageBlockTable border="2px solid red" width="100%" value="{!tr}" var="app" cellpadding="5px">
+                    <apex:column headerValue="Transaction">
+                         <apex:outputField value="{!app.Name}"/> 
+                    </apex:column>
+                   <apex:column headerValue="Name">
+                         <apex:outputField value="{!app.Contact__r.Name}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Date & Time">
+                         <apex:outputField value="{!app.LastModifiedDate}"/> 
+                    </apex:column>
+                                    <apex:column headerValue="Amount">
+                         <apex:outputField value="{!app.Amount__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Type">
+                         <apex:outputField value="{!app.Type__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Status">
+                         <apex:outputField value="{!app.Status__c}"/> 
+                    </apex:column>
+                <apex:column headerValue="Phone No">
+                         <apex:outputField value="{!app.Contact__r.MobilePhone}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Eamil ID">
+                         <apex:outputField value="{!app.Contact__r.Email}" id="txtEmailAddress" /> 
+                    </apex:column>
+     
+                 </apex:pageBlockTable>
+           </apex:pageBlockSection>
+      
+      
+       </apex:form>
+       
+      </apex:pageBlock>
+</apex:page>
+
+
+------------------Apex Page--------------------
+
+public class mstatement {
+    public List<Contact> con {get;set;}
+    public List<Transaction__c> tr {get;set;}
+    public string t {get;set;}
+    public mstatement(ApexPages.StandardController controller){
+        
+    t= ApexPages.CurrentPage().getparameters().get('id');
+	tr = [select Name, Contact__r.Name, LastModifiedDate,  Amount__c, Type__c, Status__c, 
+    Contact__r.MobilePhone, Contact__r.Email from Transaction__c where Contact__r.Id=:t and Status__c!='Pending' ORDER BY LastModifiedDate DESC LIMIT 10];
+        system.debug(tr);
+    }
+   

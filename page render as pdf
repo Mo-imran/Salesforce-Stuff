@@ -1,0 +1,136 @@
+------------------------VF page------------------------
+
+<apex:page docType="html-5.0" standardController="Contact" 
+  extensions="state" renderAs="{!if($CurrentPage.parameters.isPdf == null, null, 'pdf')}" >
+
+
+
+    <apex:pageBlock >
+	<apex:form >
+        <apex:pageBlockSection >
+            <apex:pageBlockSectionItem >
+         <apex:outputLabel >Fill A Date Range:</apex:outputLabel>
+         <apex:outputPanel >
+         <apex:input type="date" value="{!date1}" title="Date"/> To <apex:input type="date" value="{!date2}" title="Date"/>
+        <br/><br/><apex:commandButton action="{!dater}" value="Date Range" title="Search"/>
+             <apex:pageMessages id="showmsg"></apex:pageMessages>
+            </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        
+         <apex:pageBlockSection title="Transaction History" columns="1">
+ <apex:pageBlockTable border="2px solid red" width="100%" value="{!tr}" var="app" cellpadding="5px">
+                    <apex:column headerValue="Transaction">
+                         <apex:outputField value="{!app.Name}"/> 
+                    </apex:column>
+                   <apex:column headerValue="Name">
+                         <apex:outputField value="{!app.Contact__r.Name}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Date & Time">
+                         <apex:outputField value="{!app.CreatedDate}"/> 
+                    </apex:column>
+                                    <apex:column headerValue="Amount">
+                         <apex:outputField value="{!app.Amount__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Type">
+                         <apex:outputField value="{!app.Type__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Status">
+                         <apex:outputField value="{!app.Status__c}"/> 
+                    </apex:column>
+                <apex:column headerValue="Phone No">
+                         <apex:outputField value="{!app.Contact__r.MobilePhone}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Eamil ID">
+                         <apex:outputField value="{!app.Contact__r.Email}" id="txtEmailAddress" /> 
+                    </apex:column>
+     
+                 </apex:pageBlockTable>
+           </apex:pageBlockSection>
+        <apex:commandButton value="PDF"  style="padding:10px" />
+       <apex:commandButton value="CSV" action="{!convertcsv}"  style="padding:10px" /> 
+        <apex:commandButton value="E-MAIL PDF" action="{!sendPdf}" style="padding:10px" />
+        
+        </apex:form>    
+    </apex:pageBlock>
+</apex:page>
+
+----------------------Apex Page------------------------
+
+public class state {
+  
+    public date date1{get;set;}
+	public date date2{get;set;}
+    public boolean tab{get;set;}
+    public string t {get;set;}
+    public List<Contact> con {get;set;}
+    public List<Transaction__c> tr {get;set;}
+    
+    
+    public state(ApexPages.StandardController controller){
+         t = ApexPages.CurrentPage().getparameters().get('id');
+     dater();
+    }
+    
+    
+    
+    public void dater(){
+       
+          
+        if(date1 !=null && date2 != system.now())  {
+             integer monthsBetween = date1.monthsBetween(date2);
+            if(monthsBetween < 6){
+           
+ tr =[SELECT Contact__r.Name, Name, CreatedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email FROM Transaction__c  
+      WHERE Contact__r.Id =: t AND CreatedDate >=: date1 AND CreatedDate <=: date2 order by LastModifiedDate DESC];
+              system.debug('this is the whole transaction statement ' +tr +system.today());   
+           }
+            else
+            {
+              ApexPages.addmessage(new ApexPages.message(ApexPages.severity.ERROR,'Please Enter A Duration that should be Less than 6 months.'));
+            }
+            
+       date1=null;
+       date2=null;
+}
+        
+}
+    
+    
+    
+    public void sendPdf()
+    {
+		String mymail= tr[0].Contact__r.Id;
+        blob b= page.statement.getContentAsPdf();
+        Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
+        efa.setFileName('Attachment.pdf');
+        efa.setBody(b);
+        
+        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+        message.toAddresses = new String[]{mymail};
+    	system.debug('this is a correct mail' );
+		
+		message.subject = 'Transaction Attachment';
+		message.plainTextBody = 'Just For A demo Project.';
+        message.setFileAttachments(new Messaging.EmailFileAttachment[] {efa});
+		Messaging.SingleEmailMessage[] messages = new List<Messaging.SingleEmailMessage> {message};
+         Messaging.SendEmailResult[] results = Messaging.sendEmail(messages);
+		if (results[0].success) {
+    	System.debug('The email was sent successfully.');
+		} else {
+   			 System.debug('The email failed to send: '
+          + results[0].errors[0].message);
+            tr=null;
+		}
+        
+    	}
+    
+      Public void convertcsv(){
+       
+        tr =[SELECT Contact__r.Name, Name, LastModifiedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email FROM Transaction__c  WHERE  Contact__r.Id=:t ];
+         system.debug(tr);
+    }
+      
+   
+    
+}

@@ -1,0 +1,6 @@
+trigger updateProfileTrigger on Contact (before insert, before update) {
+    
+    updateContactProfileTriggerHandler handler = new updateContactProfileTriggerHandler();
+    handler.updateContactProfile(trigger.new);
+    
+}

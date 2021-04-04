@@ -1,0 +1,26 @@
+------------------update conatct address when Account get update--------------------
+
+trigger updateChild on Account (after update) {
+    
+    List<Contact> conList=new List<Contact>();
+    Account acc;
+    Contact cc;
+    List<Contact> Updatecon=new List<Contact>();
+    if (Trigger.isUpdate)
+    {
+        for(Account acc:Trigger.New){
+            conList=[select id, MailingCity from contact where accountid=:acc.id];
+            if(conList.size()>0)
+                for(contact c:conList)
+            {
+                cc=new Contact(id=c.id,MailingCity=acc.BillingCity);
+                Updatecon.add(cc);
+            }
+        }
+    }
+    
+    update Updatecon;
+    
+}
+
+

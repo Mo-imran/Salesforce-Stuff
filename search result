@@ -1,0 +1,170 @@
+-------------Search reasult------------
+****vF page******
+
+<apex:page docType="html-5.0" controller="transactions" showHeader="false" sidebar="false" renderAs="{!if($CurrentPage.parameters.isPdf == null, null, 'pdf')}">
+   
+<apex:pageBlock title="Search" >
+<apex:form >
+<apex:pageBlockSection title="Search Transaction" columns="2"> 
+    
+   <apex:pageBlockSectionItem >
+       <apex:outputLabel >Find By Entry Name:</apex:outputLabel>
+       <apex:outputPanel >
+       <apex:input type="text" value="{!find}" title="Entry Name"  /><br/><br/>
+               <apex:commandButton action="{!search}" value="Entry Name" title="Search Entry" />
+           </apex:outputPanel>
+    </apex:pageBlockSectionItem> 
+     <apex:pageBlockSectionItem >
+    <apex:outputLabel >Find By Currency Range:</apex:outputLabel>
+        <apex:outputPanel > <apex:input type="text" value="{!Cran}"  title="Currency"/> To <apex:input type="text" value="{!Cran2}" title="Currency"/>
+    <br/><br/><apex:commandButton action="{!range}" value="Currency Range" title="range"/>
+         </apex:outputPanel>
+         </apex:pageBlockSectionItem>
+     <apex:pageBlockSectionItem >
+    <apex:outputLabel >Fill A Date Range:</apex:outputLabel>
+         <apex:outputPanel >
+         <apex:input type="date" value="{!d1}" title="Date"/> To <apex:input type="date" value="{!d2}" title="Date"/>
+        <br/><br/><apex:commandButton action="{!dater}" value="Date Range" title="Search"/>
+         </apex:outputPanel>
+    </apex:pageBlockSectionItem>
+     <apex:pageBlockSectionItem >
+    <apex:outputLabel >Find By Status:</apex:outputLabel>
+         <apex:outputPanel >
+         <apex:input type="text" value="{!st}" title="Status"/>
+        <br/><br/><apex:commandButton action="{!sta}" value="Search Status" title="Search Status"/>
+         </apex:outputPanel>
+    </apex:pageBlockSectionItem>
+</apex:pageBlockSection>
+   <apex:pageBlockSection title="Transaction History" columns="1">
+ <apex:pageBlockTable border="2px solid red" width="100%" value="{!apps}" var="app" cellpadding="5px">
+                    <apex:column headerValue="Transaction">
+                         <apex:outputField value="{!app.Name}"/> 
+                    </apex:column>
+                   <apex:column headerValue="Name">
+                         <apex:outputField value="{!app.Contact__r.Name}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Date & Time">
+                         <apex:outputField value="{!app.LastModifiedDate}"/> 
+                    </apex:column>
+                                    <apex:column headerValue="Amount">
+                         <apex:outputField value="{!app.Amount__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Type">
+                         <apex:outputField value="{!app.Type__c}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Status">
+                         <apex:outputField value="{!app.Status__c}"/> 
+                    </apex:column>
+                <apex:column headerValue="Phone No">
+                         <apex:outputField value="{!app.Contact__r.MobilePhone}"/> 
+                    </apex:column>
+                    <apex:column headerValue="Eamil ID">
+                         <apex:outputField value="{!app.Contact__r.Email}" id="txtEmailAddress" /> 
+                    </apex:column>
+     
+                 </apex:pageBlockTable>
+           </apex:pageBlockSection>
+   <apex:commandButton value="EXPORT AS PDF" action="/apex/TransactionSearch?isPdf=true" style="padding:10px; width:120px; color:red" />
+    
+</apex:form>    
+</apex:pageBlock>    
+</apex:page>
+
+--------------Apex Page----------------
+
+public class transactions {
+
+    public String find{get;set;}
+    public String st{get;set;}
+    public decimal Cran{get;set;}
+    public decimal Cran2{get;set;}
+    public date d1{get;set;}
+    public date d2{get;set;}
+    public List<Transaction__c> apps {get;set;}
+   
+    
+    public void search(){
+       if(find != '' || find != '')  {
+            
+          apps =[select Name, Contact__r.Name, LastModifiedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email from Transaction__c where Contact__r.FirstName=: find or Contact__r.LastName=: find];
+     find=null;
+       }
+       else{  
+       ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please enter a value in the Required Field'));
+             apps=null;
+      }
+    }
+public void range(){	
+  
+if( Cran >= 0 && Cran2 > 0 )
+        {
+        apps =[select Contact__r.Name, Name, LastModifiedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email from Transaction__c  where Amount__c >=: cran and Amount__c <=: Cran2 ];
+        Cran=null;
+            Cran2=null;
+       }
+       
+else{            
+       ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please enter a value in the Required Field'));
+apps=null;      
+}
+       }
+    
+    public void dater(){
+        
+        if(d1 <= system.now() && d2 < = system.now())  {
+ apps =[select Contact__r.Name, Name, LastModifiedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email from Transaction__c  where LastModifiedDate >=: d1 and LastModifiedDate 
+<=: d2 ];
+       d1=null;
+       d2=null;
+}
+    
+        else{       
+       ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please enter a value in the Required Field'));
+            apps=null;
+      }
+        
+        
+    }
+    
+    public void sta(){
+       if(st != '' || st != '')  {
+            
+          apps =[select Name, Contact__r.Name, LastModifiedDate,  Amount__c, Type__c, Status__c, Contact__r.MobilePhone, Contact__r.Email from Transaction__c where Status__c=: st];
+     st=null;
+       }
+       else{  
+       ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please enter a value in the Required Field'));
+             apps=null;
+      }
+    }
+    
+    /*public void sendPdf()
+    {
+		String mymail= apps[0].Contact__r.Email;
+        blob b= page.TransactionSearch.getContentAsPdf();
+        Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
+        efa.setFileName('attachment.pdf');
+        efa.setBody(b);
+        
+        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+        message.toAddresses = new String[]{mymail};
+    	system.debug('this is a correct mail' );
+		
+		message.subject = 'Opt Out Test Message';
+		message.plainTextBody = 'This is the message body.';
+        message.setFileAttachments(new Messaging.EmailFileAttachment[] {efa});
+		Messaging.SingleEmailMessage[] messages = new List<Messaging.SingleEmailMessage> {message};
+         Messaging.SendEmailResult[] results = Messaging.sendEmail(messages);
+		if (results[0].success) {
+    	System.debug('The email was sent successfully.');
+		} else {
+   			 System.debug('The email failed to send: '
+          + results[0].errors[0].message);
+		}
+        
+    	}*/
+  
+}
+
+
+

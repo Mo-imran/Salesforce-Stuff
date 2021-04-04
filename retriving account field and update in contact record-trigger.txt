@@ -1,0 +1,24 @@
+trigger updateProfileTrigger on Contact (before insert, before update) {
+    
+    List<contact> contactList = new List<contact>();
+    Set<id> accIdList = new Set<id>();
+    for(Contact con : Trigger.new)
+    {
+        accIdList.add(con.accountid);
+    }
+    system.debug('accIdList' +accIdList);    
+    for(Account acc : [SELECT id, name, website FROM Account WHERE Id IN : accIdList])
+        
+    {
+        system.debug('acc'+acc);
+        for(Contact con : trigger.new)
+        {
+            if(acc.website != null){
+                con.Profile__c = acc.Website + '/' + con.FirstName.substring(0, 1) + '/' + con.lastname;
+                system.debug('con.Profile__c'+con.Profile__c);
+            }
+            
+        }
+    }
+    update contactList;
+}
