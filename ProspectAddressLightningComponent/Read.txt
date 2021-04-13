@@ -1,0 +1,5 @@
+Mohd Imran,
+
+Here CANDIDOEM__Deal__c(Deal) is a custom object, 
+use can use this component to retrieve and show the 
+records also you can edit and update this data.

@@ -1,0 +1,144 @@
+-----------ProspectAddressLightningComponent.cmp-----------
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" controller="DealComponentController">
+    
+    <!--Loader start-->
+    <!--<aura:handler event="aura:waiting" action="{!c.showSpinner}"/>-->
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <!--Loader End-->
+    
+    <aura:attribute name="contactrecord" type="CANDIDOEM__Deal__c" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <aura:attribute name="showInputFields" type="boolean" default="false" />
+    <aura:attribute name="fields" type="String[]" default="['CANDIDOEM__LastName__c','CANDIDOEM__Property_Type__c', 'CANDIDOEM__Occupancy_Type__c', 'CANDIDOEM__Street__c', 'CANDIDOEM__City__c', 'CANDIDOEM__Country__c', 'CANDIDOEM__State__c', 'CANDIDOEM__Postalcode__c', 'CANDIDOEM__LO__c']" />
+    
+    <!-- Occuppacy & Property End-->
+    <aura:attribute name="ObjectName" type="String" default="CANDIDOEM__Deal__c" access="global"/> 
+    <aura:attribute name="Type" type="String" default="CANDIDOEM__Property_Type__c" access="global"/>
+    <aura:attribute name="Picklist1" type="String[]" />
+    <aura:attribute name="prop" type="String" default="{!v.contactrecord.CANDIDOEM__Property_Type__c}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.p1}"/>
+    <aura:attribute name="Type2" type="String" default="CANDIDOEM__Occupancy_Type__c" access="global"/>
+    <aura:attribute name="Picklist2" type="String[]" />
+    <aura:attribute name="Occup" type="String" default="{!v.contactrecord.CANDIDOEM__Occupancy_Type__c}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.p2}"/>
+    <!-- Occuppacy & Property End-->
+    
+    <!--loading spinner start... style=Brand Medium (blue dots)-->
+    <aura:if isTrue="{!v.Spinner}">
+        <div aura:id="spinnerId" class="slds-spinner_container">
+            <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" role="alert">
+                <span class="slds-assistive-text">Loading</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </aura:if>
+    <!-- Loading spinner end-->   
+    <br/>
+    <aura:if isTrue="{!v.showInputFields}">
+        <div style="background-color: white;border-radius: var(--lwc-pageHeaderBorderRadius,0.25rem);">
+            <div class="slds-grid slds-wrap" >
+                <lightning:inputAddress
+                                        addressLabel="Address"
+                                        streetLabel="Street"
+                                        cityLabel="City"
+                                        countryLabel="Country"
+                                        provinceLabel="Province"
+                                        postalCodeLabel="Postal Code"
+                                        street="{!v.contactrecord.CANDIDOEM__Street__c}"
+                                        city="{!v.contactrecord.CANDIDOEM__City__c}"
+                                        country="{!v.contactrecord.CANDIDOEM__Country__c}"
+                                        province="{!v.contactrecord.CANDIDOEM__State__c}"
+                                        postalCode="{!v.contactrecord.CANDIDOEM__Postalcode__c}"
+                                        showAddressLookup="true"
+                                        disabled = "false"
+                                        /> 
+                
+                
+            </div>
+            
+            <div class="slds-float_right Property">
+                <ui:inputSelect aura:id="prop" value="{!v.prop}" label="Property Type">
+                    
+                    <aura:iteration items="{!v.Picklist1}" var="val">
+                        <option text="{!val}" value="{!val}" selected="{!val== v.contactrecord.CANDIDOEM__Property_Type__c}" />
+                    </aura:iteration>
+                </ui:inputSelect>
+            </div>
+            <div class="Occupancy">
+                <ui:inputSelect aura:id="Occup" value="{!v.Occup}"  label="Occupancy Type">
+                    <aura:iteration items="{!v.Picklist2}" var="val">
+                        <option text="{!val}" value="{!val}" selected="{!val==v.contactrecord.CANDIDOEM__Occupancy_Type__c}" />
+                    </aura:iteration>
+                </ui:inputSelect> 
+            </div>     
+            <div>
+                
+                <lightning:layout horizontalAlign="center" class="slds-p-vertical_medium">
+                    <lightning:button variant="brand-outline" label="Cancel" title="Cancel" onclick="{!c.handleCancel }" />
+                    
+                    <lightning:button variant="brand" label="Save" title="Save" onclick="{!c.handleSubmit }" />
+                </lightning:layout>
+            </div> 
+        </div>
+        
+    </aura:if>
+    
+    <!-- record view form -->
+    
+    <div style="width:50%" class="slds-float_right">
+        <aura:if isTrue="{!v.showInputFields == false}">
+            
+            <lightning:recordViewForm recordId="{!v.recordId}" objectApiName="CANDIDOEM__Deal__c" >
+                
+                
+                <div style="display:flex;" >
+                    <lightning:outputField fieldName="CANDIDOEM__City__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" aura:id="imgOver4" onmouseout="{!c.onout4}" onmouseover="{!c.onup4}" class="pointer2"></lightning:icon>
+                </div>
+                <div class="underline2"></div>
+                <div style="display:flex;">
+                    <lightning:outputField fieldName="CANDIDOEM__Postalcode__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" aura:id="imgOver5" onmouseout="{!c.onout5}" onmouseover="{!c.onup5}" class="pointer2"></lightning:icon>
+                </div>
+                <div class="underline2"></div>
+                <div style="display:flex;">
+                    <lightning:outputField fieldName="CANDIDOEM__Property_Type__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" aura:id="imgOver6" onmouseout="{!c.onout6}" onmouseover="{!c.onup6}" class="pointer2"></lightning:icon>
+                </div>
+                <div class="underline2"></div>
+                
+            </lightning:recordViewForm>
+            
+        </aura:if>
+    </div>
+    
+    
+    <aura:if isTrue="{!v.showInputFields == false}">
+        
+        <lightning:recordViewForm recordId="{!v.recordId}" objectApiName="CANDIDOEM__Deal__c" >
+            
+            <div style="display:flex;" >
+                <lightning:outputField fieldName="CANDIDOEM__Street__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" aura:id="imgOver1" onmouseout="{!c.onout1}" onmouseover="{!c.onup1}" class="pointer"></lightning:icon>
+            </div>
+            <div class="underline"></div>
+            
+            <div style="display:flex;">
+                <lightning:outputField fieldName="CANDIDOEM__State__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" onmouseout="{!c.onout2}" onmouseover="{!c.onup2}" aura:id="imgOver2" class="pointer"></lightning:icon>
+            </div>
+            <div class="underline"></div>
+            
+            <div style="display:flex;">
+                <lightning:outputField fieldName="CANDIDOEM__Occupancy_Type__c" /><lightning:icon iconName="utility:edit" alternativeText="Edit" size="xx-small" title="Edit" onclick="{!c.handleEdit}" onmouseout="{!c.onout3}" onmouseover="{!c.onup3}" aura:id="imgOver3" class="pointer"></lightning:icon>
+            </div>
+            <div class="underline"></div>
+            
+        </lightning:recordViewForm>
+        
+    </aura:if>
+    
+    
+    <br/>
+    
+    
+    <!-- record view form ends -->
+</aura:component>

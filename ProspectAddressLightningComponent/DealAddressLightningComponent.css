@@ -1,0 +1,74 @@
+-----------ProspectAddressLightningComponent.css-----------
+.THIS .slds-input{  
+}
+.THIS .slds-textarea {
+   
+}
+.THIS .slds-form-element__static {
+    border-bottom: 0px;
+    
+}
+.THIS .pointer{
+    cursor: pointer;
+    opacity: 0.3;
+    margin-right: 27px;
+    margin-top: 30px;
+}
+.THIS .pointer2{
+    cursor: pointer;
+    opacity: 0.3;
+    margin-right: 7px;
+    margin-top: 30px;
+}
+.THIS .point{
+    cursor: pointer;
+    opacity: 1;
+}
+.THIS .sec{
+    margin-right:10px;
+}
+.THIS .slds-show{
+    margin-top:7px;
+}
+.THIS .slds-hide{
+    margin-top:7px;
+    
+}
+
+.THIS .underline2{
+    height:1px;
+    background-color:#ccc;
+     opacity: 0.5;
+    width:100%;
+}
+.THIS .underline{
+    height:1px;
+    background-color:#ccc;
+     opacity: 0.5;
+    width:47%;
+}
+.THIS .slds-size_4-of-6{
+    width:50%;
+}
+.THIS .slds-size_2-of-6{
+    width:50%;
+}
+.THIS .slds-form_compound .slds-form-element__row .slds-form-element+.slds-form-element{
+    margin-top:1%;
+}
+.THIS .Property
+{
+    width:49%;
+}
+.THIS .Occupancy
+{
+    width:50%;
+}
+.THIS .slds-form-element__label
+{
+    display: inherit;
+}
+.THIS.slds-spinner_container {  
+  z-index: 100000;  
+  position: fixed;
+}

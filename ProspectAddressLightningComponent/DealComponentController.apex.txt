@@ -1,0 +1,64 @@
+-----------DealComponentController.apex-----------
+
+
+public class DealComponentController {
+    
+    @AuraEnabled
+    public static List<String> getPicklistvalues1(String objectName, String field_apiname, Boolean nullRequired){
+        List<String> optionlist = new List<String>();       
+        Map<String,Schema.SObjectType> gd = Schema.getGlobalDescribe(); 
+        Map<String, Schema.SObjectField> field_map = gd.get(objectName.toLowerCase()).getDescribe().fields.getMap();        
+        List<Schema.PicklistEntry> picklistValues = field_map.get(field_apiname).getDescribe().getPickListValues();       
+        if(nullRequired == true){
+            optionlist.add('--None--');
+        }       
+        for (Schema.PicklistEntry pv : picklistValues) {
+            optionlist.add(pv.getValue());
+        }
+        return optionlist;
+    }
+    @AuraEnabled
+    public static List<String> getPicklistvalues2(String objectName, String field_apiname, Boolean nullRequired){
+        List<String> optionlist = new List<String>();       
+        Map<String,Schema.SObjectType> gd = Schema.getGlobalDescribe(); 
+        Map<String, Schema.SObjectField> field_map = gd.get(objectName.toLowerCase()).getDescribe().fields.getMap();        
+        List<Schema.PicklistEntry> picklistValues = field_map.get(field_apiname).getDescribe().getPickListValues();       
+        if(nullRequired == true){
+            optionlist.add('--None--');
+        }       
+        for (Schema.PicklistEntry pv : picklistValues) {
+            optionlist.add(pv.getValue());
+        }
+        return optionlist;
+    }
+    
+    
+    @Auraenabled
+    public static CANDIDOEM__Deal__c contactDetails(String recordId){
+        CANDIDOEM__Deal__c objCon = [SELECT Id, CANDIDOEM__State__c, CANDIDOEM__Country__c, CANDIDOEM__City__c, CANDIDOEM__Street__c,candidoem__postalcode__c,CANDIDOEM__Property_Type__c, CANDIDOEM__Occupancy_Type__c
+                                     FROM CANDIDOEM__Deal__c where Id=:recordId];
+        return objCon;
+        
+    }
+    
+    @AuraEnabled
+    public static void updateData(CANDIDOEM__Deal__c recordData, String property, String occupancy, String recordId){
+        system.debug('recordData>>'+recordData);
+        system.debug('record id'+recordId);
+        CANDIDOEM__Deal__c objCon = [SELECT Id, CANDIDOEM__Property_Type__c, CANDIDOEM__Occupancy_Type__c FROM CANDIDOEM__Deal__c where Id=:recordId];
+        system.debug('occupancy'+occupancy);
+        system.debug('property'+property);
+            objCon.CANDIDOEM__Property_Type__c = (property != '--None--' && property != null) ? property : null;
+            objCon.CANDIDOEM__Occupancy_Type__c = (occupancy != '--None--' && occupancy != null) ? occupancy : null;
+        if(objCon!=null){ update objCon;}
+      
+         else if(recordData != null){
+             update recordData;
+         }
+             
+        }
+       
+      
+    
+}
+
